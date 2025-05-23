@@ -10,9 +10,40 @@
   @apply outline-none ring-2 ring-whatsapp-green ring-offset-2 ring-offset-white dark:ring-offset-gray-800;
 }
 
-/* Smooth transitions for theme switching */
+/* Smooth transitions for theme switching and mobile navigation */
 * {
-  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Enhanced mobile slide animations */
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.3s ease-out;
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.3s ease-out;
 }
 
 /* Message input focus effect */
@@ -29,7 +60,7 @@
   background-color: rgba(255, 255, 255, 0.05);
 }
 
-/* Online indicator pulse animation */
+/* Enhanced online indicator pulse animation */
 .online-indicator {
   animation: pulse 2s infinite;
 }
@@ -43,16 +74,16 @@
   }
 }
 
-/* Message bubble shadow */
+/* Message bubble enhanced shadow */
 .message-bubble {
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .dark .message-bubble {
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
-/* Typing indicator animation */
+/* Enhanced typing indicator animation */
 .typing-dot {
   animation: typing 1.4s infinite ease-in-out;
 }
@@ -76,19 +107,35 @@
   }
 }
 
-/* Custom button hover effects */
+/* Enhanced button hover effects */
 .btn-whatsapp {
-  @apply bg-whatsapp-green hover:bg-whatsapp-green-dark text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 hover:shadow-md;
+  @apply bg-whatsapp-green hover:bg-whatsapp-green-dark text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 hover:shadow-md transform hover:scale-105;
 }
 
 .btn-icon {
-  @apply p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors;
+  @apply p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-all duration-200;
 }
 
-/* Mobile responsive adjustments */
+/* Profile dropdown animation */
+.profile-dropdown {
+  animation: fadeInDown 0.2s ease-out;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Mobile responsive adjustments with enhanced transitions */
 @media (max-width: 768px) {
   .mobile-transition {
-    transition: transform 0.3s ease-in-out;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
   
   .mobile-slide-left {
@@ -97,5 +144,38 @@
   
   .mobile-slide-right {
     transform: translateX(100%);
+  }
+
+  /* Enhanced mobile chat switching */
+  .mobile-chat-enter {
+    transform: translateX(100%);
+  }
+  
+  .mobile-chat-enter-active {
+    transform: translateX(0);
+    transition: transform 0.3s ease-out;
+  }
+  
+  .mobile-sidebar-enter {
+    transform: translateX(-100%);
+  }
+  
+  .mobile-sidebar-enter-active {
+    transform: translateX(0);
+    transition: transform 0.3s ease-out;
+  }
+}
+
+/* Dark mode transition enhancements */
+.dark-mode-transition {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
