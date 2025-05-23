@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 // Mock data
 const mockChats = [
@@ -128,10 +128,25 @@ export const ChatProvider = ({ children }) => {
   const [chats] = useState(mockChats);
   const [messages] = useState(mockMessages);
   const [selectedChatId, setSelectedChatId] = useState(null);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    // Initialize dark mode from localStorage or default to false
+    const saved = localStorage.getItem('whatsapp-dark-mode');
+    return saved ? JSON.parse(saved) : false;
+  });
   const [isMobileView, setIsMobileView] = useState(window.innerWidth < 768);
-  const [showSidebar, setShowSidebar] = useState(true);
+  const [currentView, setCurrentView] = useState('sidebar'); // 'sidebar' or 'chat'
   const [isTyping, setIsTyping] = useState(false);
+
+  // Apply dark mode to document on mount and when it changes
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    // Save to localStorage
+    localStorage.setItem('whatsapp-dark-mode', JSON.stringify(isDarkMode));
+  }, [isDarkMode]);
 
   const selectedChat = selectedChatId ? chats.find(chat => chat.id === selectedChatId) : null;
   const chatMessages = selectedChatId ? messages[selectedChatId] || [] : [];
@@ -139,21 +154,40 @@ export const ChatProvider = ({ children }) => {
   const selectChat = (chatId) => {
     setSelectedChatId(chatId);
     if (isMobileView) {
-      setShowSidebar(false);
+      setCurrentView('chat');
     }
   };
 
   const goBackToSidebar = () => {
-    setShowSidebar(true);
     if (isMobileView) {
+      setCurrentView('sidebar');
       setSelectedChatId(null);
     }
   };
 
   const toggleDarkMode = () => {
     setIsDarkMode(!isDarkMode);
-    document.documentElement.classList.toggle('dark');
   };
+
+  // Handle window resize
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobileView(mobile);
+      
+      // Reset to sidebar view when switching to mobile
+      if (mobile && currentView === 'chat' && !selectedChatId) {
+        setCurrentView('sidebar');
+      }
+      // On desktop, always show both
+      if (!mobile) {
+        setCurrentView('sidebar');
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [currentView, selectedChatId]);
 
   const value = {
     chats,
@@ -163,7 +197,7 @@ export const ChatProvider = ({ children }) => {
     chatMessages,
     isDarkMode,
     isMobileView,
-    showSidebar,
+    currentView,
     isTyping,
     selectChat,
     goBackToSidebar,
