@@ -22,14 +22,19 @@ FROM nginx:stable-alpine
 # Install Python and dependencies
 RUN apk add --no-cache python3 py3-pip
 
+# Set up Python virtual environment
+ENV VIRTUAL_ENV=/opt/venv
+RUN python3 -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
 # Copy built frontend
 COPY --from=frontend-build /app/build /usr/share/nginx/html
 # Copy backend and requirements
 COPY --from=backend /app /backend
 COPY backend/requirements.txt /backend/
 
-# Install Python dependencies directly in the final stage
-RUN pip3 install --no-cache-dir -r /backend/requirements.txt
+# Install Python dependencies in virtual environment
+RUN . $VIRTUAL_ENV/bin/activate && pip install --no-cache-dir -r /backend/requirements.txt
 
 # Copy nginx config
 COPY nginx.conf /etc/nginx/nginx.conf
@@ -38,7 +43,6 @@ RUN chmod +x /entrypoint.sh
 
 # Add env variables if needed
 ENV PYTHONUNBUFFERED=1
-ENV PATH="/usr/local/bin:${PATH}"
 
 # Start both services: Uvicorn and Nginx
 CMD ["/entrypoint.sh"]
