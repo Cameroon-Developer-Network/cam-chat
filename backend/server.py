@@ -1,23 +1,19 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, Depends
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
-from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 from pathlib import Path
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing import List
-import uuid
 from datetime import datetime
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
+from database import StatusCheck as DBStatusCheck, get_session, init_db
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
-
-# MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
 
 # Create the main app without a prefix
 app = FastAPI()
@@ -25,32 +21,42 @@ app = FastAPI()
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
-
-# Define Models
-class StatusCheck(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+# Define Pydantic Models for API
+class StatusCheckBase(BaseModel):
     client_name: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
 
-class StatusCheckCreate(BaseModel):
-    client_name: str
+class StatusCheckCreate(StatusCheckBase):
+    pass
+
+class StatusCheckResponse(StatusCheckBase):
+    id: str
+    timestamp: datetime
+
+    class Config:
+        from_attributes = True
 
 # Add your routes to the router instead of directly to app
 @api_router.get("/")
 async def root():
     return {"message": "Hello World"}
 
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.dict()
-    status_obj = StatusCheck(**status_dict)
-    _ = await db.status_checks.insert_one(status_obj.dict())
-    return status_obj
+@api_router.post("/status", response_model=StatusCheckResponse)
+async def create_status_check(
+    input: StatusCheckCreate,
+    session: AsyncSession = Depends(get_session)
+):
+    db_status = DBStatusCheck(client_name=input.client_name)
+    session.add(db_status)
+    await session.commit()
+    return db_status
 
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    status_checks = await db.status_checks.find().to_list(1000)
-    return [StatusCheck(**status_check) for status_check in status_checks]
+@api_router.get("/status", response_model=List[StatusCheckResponse])
+async def get_status_checks(
+    session: AsyncSession = Depends(get_session)
+):
+    result = await session.execute(select(DBStatusCheck))
+    status_checks = result.scalars().all()
+    return list(status_checks)
 
 # Include the router in the main app
 app.include_router(api_router)
@@ -70,6 +76,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
+@app.on_event("startup")
+async def startup_event():
+    await init_db()
