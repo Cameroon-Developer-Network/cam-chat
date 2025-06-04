@@ -24,9 +24,13 @@ RUN apk add --no-cache python3 py3-pip
 
 # Copy built frontend
 COPY --from=frontend-build /app/build /usr/share/nginx/html
-# Copy backend and its dependencies
+# Copy backend and requirements
 COPY --from=backend /app /backend
-COPY --from=backend /usr/local/lib/python3.11/site-packages /usr/lib/python3.12/site-packages
+COPY backend/requirements.txt /backend/
+
+# Install Python dependencies directly in the final stage
+RUN pip3 install --no-cache-dir -r /backend/requirements.txt
+
 # Copy nginx config
 COPY nginx.conf /etc/nginx/nginx.conf
 COPY entrypoint.sh /entrypoint.sh
@@ -34,6 +38,7 @@ RUN chmod +x /entrypoint.sh
 
 # Add env variables if needed
 ENV PYTHONUNBUFFERED=1
+ENV PATH="/usr/local/bin:${PATH}"
 
 # Start both services: Uvicorn and Nginx
 CMD ["/entrypoint.sh"]
