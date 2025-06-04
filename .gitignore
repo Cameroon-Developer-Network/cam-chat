@@ -45,4 +45,4 @@ agenthub/agents/youtube/db
 
 venv/
 .venv/
-__pycache__/
+__pycache__/.config/gh/hosts.yml
