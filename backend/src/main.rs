@@ -72,17 +72,18 @@ async fn main() -> Result<()> {
 
 fn create_app(state: AppState) -> Router {
     Router::new()
-        // API routes
+        // Public routes
         .route("/api/auth/login", post(routes::auth::login))
+        .route("/health", get(health_check))
+        
+        // Protected routes
         .route("/api/chats", get(routes::chats::get_chats))
         .route("/api/chats/:chat_id/messages", get(routes::messages::get_messages))
         .route("/api/chats/:chat_id/messages", post(routes::messages::send_message))
+        .layer(middleware::from_fn_with_state(state.clone(), auth_middleware))
         
-        // WebSocket route
+        // WebSocket route (handles auth internally)
         .route("/ws/:chat_id", get(ws::websocket_handler))
-        
-        // Health check
-        .route("/health", get(health_check))
         
         // Middleware
         .layer(
