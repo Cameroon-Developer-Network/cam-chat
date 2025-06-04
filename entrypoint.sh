@@ -6,7 +6,7 @@ cd /backend || { echo "Backend directory not found"; exit 1; }
 
 echo "Starting FastAPI backend"
 # Start Uvicorn with proper host binding
-python3 -m uvicorn server:app --host 0.0.0.0 --port 8001 &
+. /opt/venv/bin/activate && python -m uvicorn server:app --host 0.0.0.0 --port 8001 &
 BACKEND_PID=$!
 
 echo "Waiting for backend to start..."
