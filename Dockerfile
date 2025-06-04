@@ -33,16 +33,15 @@ COPY --from=frontend-build /app/build /usr/share/nginx/html
 COPY --from=backend /app /backend
 COPY backend/requirements.txt /backend/
 
-# Install Python dependencies in virtual environment with retry logic
-RUN echo "#!/bin/sh\n\
-for i in \$(seq 1 3); do\n\
-    echo \"Attempt \$i of 3\"\n\
-    pip install --default-timeout=100 --no-cache-dir -r /backend/requirements.txt && \
-    pip install --default-timeout=100 --no-cache-dir asyncpg psycopg2-binary && break\n\
-    sleep 5\n\
-done" > /install.sh && \
-    chmod +x /install.sh && \
-    /install.sh
+# Install Python dependencies with retries
+RUN pip install --default-timeout=100 --no-cache-dir -r /backend/requirements.txt || \
+    pip install --default-timeout=100 --no-cache-dir -r /backend/requirements.txt || \
+    pip install --default-timeout=100 --no-cache-dir -r /backend/requirements.txt
+
+# Install additional packages with retries
+RUN pip install --default-timeout=100 --no-cache-dir asyncpg psycopg2-binary || \
+    pip install --default-timeout=100 --no-cache-dir asyncpg psycopg2-binary || \
+    pip install --default-timeout=100 --no-cache-dir asyncpg psycopg2-binary
 
 # Copy nginx config
 COPY nginx.conf /etc/nginx/nginx.conf
