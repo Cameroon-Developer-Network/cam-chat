@@ -1,4 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { chats } from '../services/api';
+import websocketService from '../services/websocket';
+import { useAuth } from './AuthContext';
 
 // Mock data
 const mockChats = [
@@ -114,7 +117,95 @@ const mockMessages = {
   ],
 };
 
-const ChatContext = createContext();
+const ChatContext = createContext(null);
+
+export const ChatProvider = ({ children }) => {
+  const [chatList, setChatList] = useState([]);
+  const [currentChat, setCurrentChat] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const { isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    if (isAuthenticated()) {
+      loadChats();
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (currentChat) {
+      loadMessages(currentChat.id);
+      connectToWebSocket(currentChat.id);
+    }
+    return () => {
+      websocketService.disconnect();
+    };
+  }, [currentChat]);
+
+  const loadChats = async () => {
+    try {
+      const data = await chats.list();
+      setChatList(data);
+      setLoading(false);
+    } catch (error) {
+      console.error('Failed to load chats:', error);
+      setLoading(false);
+    }
+  };
+
+  const loadMessages = async (chatId) => {
+    try {
+      const data = await chats.getMessages(chatId);
+      setMessages(data);
+    } catch (error) {
+      console.error('Failed to load messages:', error);
+    }
+  };
+
+  const connectToWebSocket = (chatId) => {
+    websocketService.connect(chatId);
+    const removeHandler = websocketService.addMessageHandler((message) => {
+      setMessages(prev => [...prev, message]);
+    });
+
+    return () => {
+      removeHandler();
+      websocketService.disconnect();
+    };
+  };
+
+  const sendMessage = async (content) => {
+    if (!currentChat) return;
+
+    try {
+      const message = await chats.sendMessage(currentChat.id, content);
+      setMessages(prev => [...prev, message]);
+      websocketService.sendMessage(message);
+    } catch (error) {
+      console.error('Failed to send message:', error);
+    }
+  };
+
+  const selectChat = (chat) => {
+    setCurrentChat(chat);
+  };
+
+  return (
+    <ChatContext.Provider
+      value={{
+        chatList,
+        currentChat,
+        messages,
+        loading,
+        selectChat,
+        sendMessage,
+        refreshChats: loadChats,
+      }}
+    >
+      {children}
+    </ChatContext.Provider>
+  );
+};
 
 export const useChat = () => {
   const context = useContext(ChatContext);
@@ -122,89 +213,4 @@ export const useChat = () => {
     throw new Error('useChat must be used within a ChatProvider');
   }
   return context;
-};
-
-export const ChatProvider = ({ children }) => {
-  const [chats] = useState(mockChats);
-  const [messages] = useState(mockMessages);
-  const [selectedChatId, setSelectedChatId] = useState(null);
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    // Initialize dark mode from localStorage or default to false
-    const saved = localStorage.getItem('whatsapp-dark-mode');
-    return saved ? JSON.parse(saved) : false;
-  });
-  const [isMobileView, setIsMobileView] = useState(window.innerWidth < 768);
-  const [currentView, setCurrentView] = useState('sidebar'); // 'sidebar' or 'chat'
-  const [isTyping, setIsTyping] = useState(false);
-
-  // Apply dark mode to document on mount and when it changes
-  useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-    // Save to localStorage
-    localStorage.setItem('whatsapp-dark-mode', JSON.stringify(isDarkMode));
-  }, [isDarkMode]);
-
-  const selectedChat = selectedChatId ? chats.find(chat => chat.id === selectedChatId) : null;
-  const chatMessages = selectedChatId ? messages[selectedChatId] || [] : [];
-
-  const selectChat = (chatId) => {
-    setSelectedChatId(chatId);
-    if (isMobileView) {
-      setCurrentView('chat');
-    }
-  };
-
-  const goBackToSidebar = () => {
-    if (isMobileView) {
-      setCurrentView('sidebar');
-      setSelectedChatId(null);
-    }
-  };
-
-  const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode);
-  };
-
-  // Handle window resize
-  useEffect(() => {
-    const handleResize = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobileView(mobile);
-      
-      // Reset to sidebar view when switching to mobile
-      if (mobile && currentView === 'chat' && !selectedChatId) {
-        setCurrentView('sidebar');
-      }
-      // On desktop, always show both
-      if (!mobile) {
-        setCurrentView('sidebar');
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [currentView, selectedChatId]);
-
-  const value = {
-    chats,
-    messages,
-    selectedChatId,
-    selectedChat,
-    chatMessages,
-    isDarkMode,
-    isMobileView,
-    currentView,
-    isTyping,
-    selectChat,
-    goBackToSidebar,
-    toggleDarkMode,
-    setIsMobileView,
-    setIsTyping,
-  };
-
-  return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
 };
