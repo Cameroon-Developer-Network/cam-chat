@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      args:
+        FRONTEND_ENV: "REACT_APP_API_URL=http://localhost:8001/api"
+    ports:
+      - "8000:80"  # Nginx
+      - "8001:8001"  # Backend API
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/cam_chat_db
+    depends_on:
+      - db
+
+  db:
+    image: postgres:15
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=cam_chat_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data: 
