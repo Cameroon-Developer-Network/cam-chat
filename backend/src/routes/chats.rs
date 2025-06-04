@@ -122,6 +122,9 @@ async fn fetch_user_chats(state: &AppState, user_id: Uuid) -> anyhow::Result<Vec
 }
 
 async fn create_mock_chats(state: &AppState, user_id: Uuid) -> anyhow::Result<()> {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+    
     // Create mock users if they don't exist
     let mock_users = vec![
         ("alice@example.com", "Alice Johnson", "1494790108755-2616b612b47c"),
@@ -145,6 +148,11 @@ async fn create_mock_chats(state: &AppState, user_id: Uuid) -> anyhow::Result<()
             let new_user_id = Uuid::new_v4();
             let now = chrono::Utc::now();
             let avatar_url = format!("https://images.unsplash.com/photo-{}?w=150&h=150&fit=crop&crop=face", photo_id);
+            
+            // Generate deterministic online status based on email
+            let mut hasher = DefaultHasher::new();
+            email.hash(&mut hasher);
+            let is_online = (hasher.finish() % 2) == 0;
 
             sqlx::query!(
                 r#"
@@ -155,7 +163,7 @@ async fn create_mock_chats(state: &AppState, user_id: Uuid) -> anyhow::Result<()
                 email,
                 name,
                 avatar_url,
-                rand::random::<bool>(), // Random online status
+                is_online,
                 now,
                 now,
                 now
