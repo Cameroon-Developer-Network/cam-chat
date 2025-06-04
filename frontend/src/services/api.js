@@ -18,12 +18,24 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Handle 401 responses
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('jwt_token');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
 export const auth = {
   login: async (username, password) => {
     const response = await api.post('/api/auth/login', { username, password });
-    const { token } = response.data;
+    const { token, user } = response.data;
     localStorage.setItem('jwt_token', token);
-    return response.data;
+    return { token, user };
   },
   logout: () => {
     localStorage.removeItem('jwt_token');
@@ -38,13 +50,25 @@ export const chats = {
     const response = await api.get('/api/chats');
     return response.data;
   },
-  getMessages: async (chatId) => {
-    const response = await api.get(`/api/chats/${chatId}/messages`);
-    return response.data;
+  getMessages: async (chatId, { page = 1, limit = 50 } = {}) => {
+    const response = await api.get(`/api/chats/${chatId}/messages`, {
+      params: { page, limit },
+    });
+    return {
+      messages: response.data.messages,
+      hasMore: response.data.has_more,
+      total: response.data.total,
+    };
   },
   sendMessage: async (chatId, content) => {
     const response = await api.post(`/api/chats/${chatId}/messages`, { content });
     return response.data;
+  },
+  markMessagesSeen: async (chatId, messageIds) => {
+    await api.post(`/api/chats/${chatId}/messages/seen`, { messageIds });
+  },
+  sendTypingStatus: async (chatId, isTyping) => {
+    await api.post(`/api/chats/${chatId}/typing`, { isTyping });
   },
 };
 
