@@ -218,7 +218,12 @@ async fn create_mock_chats(state: &AppState, user_id: Uuid) -> anyhow::Result<()
             "Thanks for the help yesterday!",
             "Can you send me the documents?",
         ];
-        let message_content = mock_messages[rand::random::<usize>() % mock_messages.len()];
+        
+        // Generate deterministic message based on user ID
+        let mut hasher = DefaultHasher::new();
+        other_user_id.hash(&mut hasher);
+        let message_index = (hasher.finish() as usize) % mock_messages.len();
+        let message_content = mock_messages[message_index];
 
         sqlx::query!(
             r#"
