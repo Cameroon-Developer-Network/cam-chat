@@ -1,24 +1,38 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ThemeProvider } from './context/ThemeContext';
+import { AuthProvider } from './context/AuthContext';
 import { ChatProvider } from './context/ChatContext';
+import { LayoutProvider } from './context/LayoutContext';
 import Login from './components/Login';
 import ChatLayout from './components/ChatLayout';
+import PrivateRoute from './components/PrivateRoute';
 import './App.css';
 
 function App() {
   return (
-    <ChatProvider>
-      <div className="App">
-        <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/chat" element={<ChatLayout />} />
-            <Route path="/chat/:chatId" element={<ChatLayout />} />
-            <Route path="/" element={<Navigate to="/login" replace />} />
-          </Routes>
-        </BrowserRouter>
-      </div>
-    </ChatProvider>
+    <Router>
+      <ThemeProvider>
+        <AuthProvider>
+          <LayoutProvider>
+            <ChatProvider>
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route
+                  path="/chat/*"
+                  element={
+                    <PrivateRoute>
+                      <ChatLayout />
+                    </PrivateRoute>
+                  }
+                />
+                <Route path="/" element={<Navigate to="/chat" replace />} />
+              </Routes>
+            </ChatProvider>
+          </LayoutProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </Router>
   );
 }
 
