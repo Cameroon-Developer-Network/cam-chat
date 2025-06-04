@@ -2,6 +2,7 @@ use anyhow::Result;
 use axum::{
     extract::Extension,
     http::Method,
+    middleware,
     routing::{get, post},
     Router,
 };
@@ -18,6 +19,7 @@ mod models;
 mod routes;
 mod ws;
 
+use auth::auth_middleware;
 use db::Database;
 use ws::ChatMessage;
 
